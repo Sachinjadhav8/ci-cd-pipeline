@@ -1,0 +1,35 @@
+pipeline {
+    agent any
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'master', url: "https://github.com/Sachinjadhav8/DevOps_Project.git"
+            }
+        }
+
+        stage('Build and Test') {
+            steps {
+                sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && /opt/maven/bin/mvn clean package'
+            }
+        }
+
+        stage('Static Code Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {   // <-- Jenkins SonarQube config name
+                    sh '''
+                        cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
+                        /opt/maven/bin/mvn sonar:sonar
+                    '''
+                }
+            }
+        }
+
+        stage('SonarQube Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {   // 5 min is safer than 2
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+    }
+}
